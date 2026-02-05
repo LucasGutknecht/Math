@@ -132,4 +132,45 @@ impl Lexer {
 
       valores.parse::<f64>().unwrap()
     }
+
+    /*
+    * 
+    * The function next_token is expexted to reach the next token of the lexer.
+    *
+    * 1 - We should assert that the actual char is not a white space by calling skip_whitespace
+    * 2 - After that we should put the current char to a variable, using ? will assert that if the
+    *   value is not what we expected, returns None.
+    *
+    *
+    * */
+    fn next_token(&mut self) -> Option<ExpressionTokens>{
+        self.skip_whitespace();
+        
+        let ch = self.peek()?;
+
+        match ch {
+            '0'..='9' => {
+                return Some(ExpressionTokens::Number(self.read_number()));
+            },
+            '(' => {
+                self.advance();
+                Some(ExpressionTokens::LeftParenthesis)
+            },
+            ')' => {
+                self.advance();
+                Some(ExpressionTokens::RightParenthesis)
+            },
+            '+' | '-' | '*' | '/' => {
+                self.advance();
+                Some(ExpressionTokens::Operator(ch))
+            },
+            'a'..='z' | 'A'..='Z' | '_' => {
+                return Some(ExpressionTokens::Variable(self.read_identifier()))
+            },
+            _ => {
+                self.advance();
+                None
+            }
+        }
+    }
 }
