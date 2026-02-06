@@ -133,6 +133,19 @@ impl Lexer {
       valores.parse::<f64>().unwrap()
     }
 
+    fn read_identifier(&mut self) -> String {
+        let mut identificador = String::new();
+    
+        while self.peek().map_or(false, |ch| ch.is_alphanumeric() || ch == '_') {
+            if let Some(ch) = self.peek() {
+                identificador.push(ch);
+            }
+            self.advance();
+        }
+    
+        identificador
+    }
+
     /*
     * 
     * The function next_token is expexted to reach the next token of the lexer.
@@ -140,7 +153,15 @@ impl Lexer {
     * 1 - We should assert that the actual char is not a white space by calling skip_whitespace
     * 2 - After that we should put the current char to a variable, using ? will assert that if the
     *   value is not what we expected, returns None.
+    * 3 - We will mathc the char and execute the accordingly method.
+    * 
+    * Given that we could define some points:
     *
+    * - The match methods will be encapsulated in the Some wing, where it brings something or
+    * None. The desired methods then, will be encapsulated in the methods of the evaluator.rs:
+    * ExpressionTokens, Number, Operator etc.
+    * - the _ option means everything else, returning the None. It could call something like panic.
+    * But I decided to leave to None. 
     *
     * */
     fn next_token(&mut self) -> Option<ExpressionTokens>{
@@ -172,5 +193,15 @@ impl Lexer {
                 None
             }
         }
+    }
+
+    fn tokenize(&mut self) -> Vec<ExpressionTokens> {
+        let mut tokens = Vec::new();
+    
+        while let Some(token) = self.next_token() {
+            tokens.push(token);
+        }
+    
+        tokens
     }
 }

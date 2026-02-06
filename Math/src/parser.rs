@@ -18,4 +18,8 @@ impl Parser {
     fn new(tokens: Vec<ExpressionTokens>) -> Self {
         Parser { position: 0, tokens }
     }
+
+    fn peek(&self) -> Option<&ExpressionTokens> {
+        self.input.chars().nth(self.position)
+    }
 }
