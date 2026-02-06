@@ -22,4 +22,9 @@ impl Parser {
     fn peek(&self) -> Option<&ExpressionTokens> {
         self.input.chars().nth(self.position)
     }
+    
+    fn advance(&mut self) {
+        self.position += 1;
+    }
+
 }
