@@ -9,18 +9,18 @@ struct Parser {
     position: usize,
     tokens: Vec<ExpressionTokens>
 }
-/*
-parse_expression(min_bp){
-    
+
+impl BindPower {
+
 }
-*/
+
 impl Parser {
     fn new(tokens: Vec<ExpressionTokens>) -> Self {
         Parser { position: 0, tokens }
     }
 
     fn peek(&self) -> Option<&ExpressionTokens> {
-        self.input.chars().nth(self.position)
+        self.tokens.chars().nth(self.position)
     }
     
     fn advance(&mut self) {
