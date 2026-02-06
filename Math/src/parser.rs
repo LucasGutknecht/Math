@@ -10,7 +10,18 @@ struct Parser {
     tokens: Vec<ExpressionTokens>
 }
 
-impl BindPower {
+impl BindPower{
+    fn get_bind_power(ch: char) -> Option<(i32, i32)> {
+        match ch {
+            '+' | '-' => {
+                return Some((10, 9))
+            },
+            '*' | '/' => {
+                return Some((20, 19))
+            },
+            _ => None,
+        }  
+    }
 
 }
 
@@ -20,11 +31,10 @@ impl Parser {
     }
 
     fn peek(&self) -> Option<&ExpressionTokens> {
-        self.tokens.chars().nth(self.position)
+        self.tokens.get(self.position)
     }
     
     fn advance(&mut self) {
         self.position += 1;
     }
-
 }
