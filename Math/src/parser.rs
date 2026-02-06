@@ -37,4 +37,22 @@ impl Parser {
     fn advance(&mut self) {
         self.position += 1;
     }
+
+    fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode>{
+        let token = self.peek();
+        
+        match n {
+            Some(ExpressionTokens::Number(token)) => {
+                self.advance();
+                return Some(ASTNode::Number(*token))
+            },
+            Some(ExpressionTokens::Variable(token)) => {
+                self.advance();
+                return Some(ASTNode::Variable(token.clone()))
+            },
+            _ => {
+                None
+            }
+        }
+    }
 }
