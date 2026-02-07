@@ -150,6 +150,16 @@ impl Lexer {
     * 
     * The function next_token is expexted to reach the next token of the lexer.
     *
+    * The fucntion returns a type ExpressionTokens encapsulated by Option, the option is an enum
+    * used to Handle absence of an value, eliminating the null pointer errors like:
+    *
+    * 
+    * Option<T> -> T = Types
+    * Returns:
+    *   Some(T) -> Whichever variant that takes the value of type T
+    *   None -> Whichever variant that takes the absence of value; None can be assigned directly
+    *   as None(Without the ; at the end)
+    *
     * 1 - We should assert that the actual char is not a white space by calling skip_whitespace
     * 2 - After that we should put the current char to a variable, using ? will assert that if the
     *   value is not what we expected, returns None.
@@ -160,6 +170,7 @@ impl Lexer {
     * - The match methods will be encapsulated in the Some wing, where it brings something or
     * None. The desired methods then, will be encapsulated in the methods of the evaluator.rs:
     * ExpressionTokens, Number, Operator etc.
+    * - 
     * - the _ option means everything else, returning the None. It could call something like panic.
     * But I decided to leave to None. 
     *
