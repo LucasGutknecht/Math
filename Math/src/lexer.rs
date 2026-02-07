@@ -153,12 +153,22 @@ impl Lexer {
     * The fucntion returns a type ExpressionTokens encapsulated by Option, the option is an enum
     * used to Handle absence of an value, eliminating the null pointer errors like:
     *
-    * 
     * Option<T> -> T = Types
     * Returns:
     *   Some(T) -> Whichever variant that takes the value of type T
     *   None -> Whichever variant that takes the absence of value; None can be assigned directly
     *   as None(Without the ; at the end)
+    * 
+    * The function pass as param: &mut self -> https://idiomatic-rust-snippets.org/essentials/std-lib/self.html
+    *
+    * It may be understood as:
+    *  Self is used to refer to the instance of the struct or enum with its own associated methods.
+    *  As param, it indicates thats the method takes ownershiip, borrows the immutability or mutabilility of the instance. 
+    *  That means that the methods takes characteristics from the instance per se, given whatever meaning the instance has 
+    *  stablished prior, it dos as:
+    *   - self -> it means the method takes the ownershiip of the instance.
+    *   - &self -> it means the method borrows the instance immutability.
+    *   - &mut self -> it means the method borrows the instance mutably.
     *
     * 1 - We should assert that the actual char is not a white space by calling skip_whitespace
     * 2 - After that we should put the current char to a variable, using ? will assert that if the
