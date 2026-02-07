@@ -39,20 +39,48 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode>{
-        let token = self.peek();
-        
-        match n {
+        let mut left = match self.peek() {
             Some(ExpressionTokens::Number(token)) => {
                 self.advance();
-                return Some(ASTNode::Number(*token))
+                ASTNode::Number(*token)
             },
             Some(ExpressionTokens::Variable(token)) => {
                 self.advance();
-                return Some(ASTNode::Variable(token.clone()))
+                ASTNode::Variable(token.clone())
             },
             _ => {
-                None
+                return None
+            }
+        };
+            
+        loop{
+            
+            let token = self.peek();
+            match token {
+                Some(ExpressionTokens::Operator(token)) => {
+                    let (lbp, rbp)  = match get_bind_power(*token) {
+                        Some(bp) => bp,
+                        None => break,
+                    };
+                    if lbp <= min_bp {
+                        break;
+                    }
+
+                    let op = *token;
+                    self.advance();
+
+                    let right = self.parse_expression(rbp)?;
+
+                    left = ASTNode::Operator {
+                        operator: op,
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    };
+
+                },
+                _ => break
             }
         }
+        Some(left)
     }
 }
