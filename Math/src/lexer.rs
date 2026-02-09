@@ -170,12 +170,16 @@ impl Lexer {
     *   - &self -> it means the method borrows the instance immutability.
     *   - &mut self -> it means the method borrows the instance mutably.
     *
-    * 1 - We should assert that the actual char is not a white space by calling skip_whitespace
-    * 2 - After that we should put the current char to a variable, using ? will assert that if the
+    * The function function on the following steps:
+    *
+    * Step 1 - We should assert that the actual char is not a white space by calling skip_whitespace
+    * Step 2 - After that we should put the current char to a variable, using ? will assert that if the
     *   value is not what we expected, returns None.
-    * 3 - We will mathc the char and execute the accordingly method.
+    * Step 3 - We will match the char and execute the accordingly method.
+    *   - If a digit from 0 to 9, return self.read_number() which transforms the String into a number of type f64, this is encapsulated into a Number type stablished on the ExpressionTokens enum,
+    *   encapsulated on Some()(An variant of the Option<T> enum).
     * 
-    * Given that we could define some points:
+    * Given that we could likely define some points:
     *
     * - The match methods will be encapsulated in the Some wing, where it brings something or
     * None. The desired methods then, will be encapsulated in the methods of the evaluator.rs:
@@ -216,6 +220,18 @@ impl Lexer {
         }
     }
 
+    /*
+    *   The purpose of the function tokenize is to create a vector of the type ExpressionTokens. 
+    *
+    *   The function operates like:
+    *
+    *   1 - Declare a new Vec.
+    *   2 - Initialize an look with:
+    *       - IF some(token) which means there is some token, then, if not, None.
+    *           - If Some: push the token to the Vec. PUSH: Appends an element to the back of a
+    *           collection. (https://doc.rust-lang.org/std/vec/struct.Vec.html#method.push)
+    *   3 - At the end, return a vec of tokens like this: ['(','3','+','8',')','+','5']
+    * */
     fn tokenize(&mut self) -> Vec<ExpressionTokens> {
         let mut tokens = Vec::new();
     
