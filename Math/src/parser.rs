@@ -48,6 +48,15 @@ impl Parser {
                 self.advance();
                 ASTNode::Variable(token.clone())
             },
+            Some(ExpressionTokens::LeftParenthesis) => {
+                self.advance();
+                let inner = self.parse_expression(0)?;
+                match self.peek(){
+                    Some(ExpressionTokens::RightParenthesis) => self.advance(),
+                    _ => return None,
+                }
+                inner
+            },
             _ => {
                 return None
             }
@@ -82,5 +91,9 @@ impl Parser {
             }
         }
         Some(left)
+    }
+
+    fn parse(&mut self) -> Option<ASTNode> {
+        self.parse_expression(0)
     }
 }
