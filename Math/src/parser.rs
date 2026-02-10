@@ -1,4 +1,18 @@
 /* The parser file*/
+
+
+/* 
+* This struct details the BindPower which consists of:
+*   - Operator of the type char, which receives the operator itself.
+*   - LBP(Left bind power): Which is the bind power of the given operator is in how tight it
+*   attracts its operands on the left. 
+*   - RBP(Right bind power): Entails the bind power of the given operator on how tight it attracts its operands from the right. 
+*   
+*   As example: if the left of the operator + as a bind of 10 and its right has a bind of 9, given 3 + 4 + 5, it would evaluate (3 + 4) + 5. 
+*   
+*   Both, lbp and rbp use the type i32 (Which is an 32-bit signed integer type as in: https://doc.rust-lang.org/std/primitive.i32.html)
+*
+* */
 struct BindPower {
     operator: char,
     lbp: i32,
