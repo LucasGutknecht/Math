@@ -58,7 +58,7 @@ impl Parser {
             let token = self.peek();
             match token {
                 Some(ExpressionTokens::Operator(token)) => {
-                    let (lbp, rbp)  = match get_bind_power(*token) {
+                    let (lbp, rbp)  = match BindPower::get_bind_power(*token) {
                         Some(bp) => bp,
                         None => break,
                     };
