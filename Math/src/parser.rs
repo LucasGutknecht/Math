@@ -19,6 +19,58 @@ struct BindPower {
     rbp: i32,
 }
 
+/*
+* This struct details the Parser which consists of:
+*   
+*   - Position of the type usize, which is a primitive pointer-sized unsigned integer. It takes to
+*   reference how many bytes into locations of the memory. Thats being, it maximum value is 2^64 -1
+*   on 64-bit targets. And the minimum is Zero. TLDR: Most of the rust integer types use consistent
+*   memory regardless of the system. As example: u32, always use 32 bits (4 bytes) of memory an go
+*   one for types like u8, i64 etc. In contrast, usize and isize are architecture-dependent type
+*   whose size adapts to the underling system. Those types are more like aliases/nicknames than integer types
+*   per se... we can define them like this (See: https://towardsdev.com/understanding-rusts-dynamic-integer-types-usize-and-isize-60b44dd581b6):
+*       - usize: An unsigned integer type for representing sizes and indices
+*           let's that be:
+*               let days: usize = 55; It is equivalent u32 on a 32-bit system and u64 on a 64-bit
+*               system.
+*               Use this for array indices, collections lengths, and memory sizes.
+*       - isize: A signed integer type that can represent both positive and negative values
+*           let's that be:
+*               let count: isize = -15000; It is the equivalent to i32 on a 32-bit system and i64
+*               on a 64-bit system.
+*               Use this when you need signed integers that match the platform's word size.
+*
+*       - Signed vs Unsigned
+*           Signed: It may contain both positive or negative integers.
+*           Unsigned: It contains only positive integers.
+*
+*           From Google:
+*
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*            | Feature          | Signed Integers (i8, i32, isize, etc.)          | Unsigned Integers (u8, u32, usize, etc.)        |
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*            | Values           | Can be negative, positive, or zero.             | Can be zero or positive only (non-negative).   |
+*            |                  | Stored using two's complement representation.   |                                               |
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*            | Range            | -(2^(n-1)) to 2^(n-1) - 1                        | 0 to 2^n - 1                                   |
+*            |                  | Roughly split between negative and positive.    | Twice the max positive value of signed type.   |
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*            | Use Cases        | General math, values that may go negative,      | Counting items, array indexing, memory         |
+*            |                  | temperature, financial debt.                    | addresses/offsets, bitwise operations.         |
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*            | Compiler Safety  | Overflow panics in debug builds.                | Negative literals rejected at compile time.    |
+*            |                  | Helps catch unexpected behavior.                | Underflow (e.g., 0 - 1) panics in debug builds.|
+*            +------------------+-----------------------------------------------+-----------------------------------------------+
+*
+*
+*   - Tokens of the type Vec, encapsulating ExpressionTokens, which is a type defined on
+*   evaluator.rs. Vecs can be defined as: A contiguous (One after other like a chain where a piece
+*   touches the next one and vice-versa) ever growing array type. (See: https://doc.rust-lang.org/std/vec/struct.Vec.html)
+*
+* So given the fields of the struct we can define the whole structured like this: The parser must
+* know the position and the tokens akin of that position on the evaluator.
+* */
+
 struct Parser {
     position: usize,
     tokens: Vec<ExpressionTokens>
