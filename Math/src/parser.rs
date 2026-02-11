@@ -105,6 +105,21 @@ impl BindPower{
 
 }
 
+/*
+* This is the implementation of the struct Parser
+*
+* It has some function. The main objective of the implementation is at ender create nodes of the
+* type ASTNode which will be used to evalute any given expressions. The implmentation has the
+* following methods:
+*
+*  1 - new: Receives a Vec of ExpressionTokens and creates an instance starting at position 0.
+*  2 - peek: Returns a reference to the current token without advancing.
+*  3 - advance: Moves position forward by one.
+*  4 - parse_expression: The core Pratt parsing algorithm. Takes min_bp (minimum binding power)
+*      and recursively builds an AST respecting operator precedence.
+*  5 - parse: Convenience method that calls parse_expression(0) to start parsing.
+*
+* */
 impl Parser {
     fn new(tokens: Vec<ExpressionTokens>) -> Self {
         Parser { position: 0, tokens }
