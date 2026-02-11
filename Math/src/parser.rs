@@ -10,7 +10,7 @@
 *   
 *   As example: if the left of the operator + as a bind of 10 and its right has a bind of 9, given 3 + 4 + 5, it would evaluate (3 + 4) + 5. 
 *   
-*   Both, lbp and rbp use the type i32 (Which is an 32-bit signed integer type as in: https://doc.rust-lang.org/std/primitive.i32.html)
+*   Both, lbp and rbp use the type i32 (Which is a 32-bit signed integer type as in: https://doc.rust-lang.org/std/primitive.i32.html)
 *
 * */
 struct BindPower {
@@ -76,6 +76,20 @@ struct Parser {
     tokens: Vec<ExpressionTokens>
 }
 
+
+/*
+* The following is the implementation of the BindPower struct. 
+*
+* It has the get_bind_power function which has a char as param and returns an Option with a tuple
+* with two i32 meaning the lbp and rbp. Option, means either Some value or None (See: https://doc.rust-lang.org/std/option/).
+*
+* It makes by default:
+*   - for the + and - we define the power lbp = 10 and rbp = 9
+*   - for the * and / we define the power lbp = 20 and rbp = 19
+*
+*   We could say the most powerful operator is *
+*
+* */
 impl BindPower{
     fn get_bind_power(ch: char) -> Option<(i32, i32)> {
         match ch {
