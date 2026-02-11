@@ -1,4 +1,6 @@
+// The evaluator.rs file
 
+use std::collections::Hashmap;
 
 /*
 
@@ -162,8 +164,8 @@ enum ASTNode {
 
 */
 struct EvaluationContext {
-    variables: std::collections::HashMap<String, f64>,
-    functions: std::collections::HashMap<String, fn(Vec<f64>) -> f64>,
+    variables: HashMap<String, f64>,
+    functions: HashMap<String, fn(Vec<f64>) -> f64>,
 }
 
 /*
@@ -191,4 +193,17 @@ enum EvaluationError {
     UndefinedVariable(String),
     UndefinedFunction(String),
     SyntaxError(String),
+}
+
+
+/*
+* This is EvaluationContext implementation. The objective is to tell the evaluator the context
+* necessary for the evaluation. If the expression has no need for context, the method would just
+* pass as it is... while expressions with contexts like Variables or Functions, the methods of the
+* EvaluationContext should be able to tell the evaluator the needed context. 
+* */
+impl EvaluationContext {
+    fn new(variables: Hashmap<String, f64>, functions: Hashmap<String, fn(Vec<f64>) -> f64>) -> self {      
+        Self {variables, function}
+    }
 }
