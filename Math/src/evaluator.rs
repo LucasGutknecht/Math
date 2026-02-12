@@ -1,6 +1,6 @@
 // The evaluator.rs file
 
-use std::collections::Hashmap;
+use std::collections::HashMap;
 
 /*
 
@@ -203,7 +203,16 @@ enum EvaluationError {
 * EvaluationContext should be able to tell the evaluator the needed context. 
 * */
 impl EvaluationContext {
-    fn new(variables: Hashmap<String, f64>, functions: Hashmap<String, fn(Vec<f64>) -> f64>) -> self {      
-        Self {variables, function}
+    fn new(variables: HashMap<String, f64>, functions: HashMap<String, fn(Vec<f64>) -> f64>) -> Self {      
+        Self {variables, functions}
     }
+
+    fn set_variable(&mut self, variable: String, value: f64) {
+        self.variables.insert(variable, value);
+    }
+
+    fn set_function(&mut self, function: String, value: fn(Vec<f64>) -> f64) {
+        self.functions.insert(function, value);
+    }
+
 }
