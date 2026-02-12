@@ -201,6 +201,11 @@ enum EvaluationError {
 * necessary for the evaluation. If the expression has no need for context, the method would just
 * pass as it is... while expressions with contexts like Variables or Functions, the methods of the
 * EvaluationContext should be able to tell the evaluator the needed context. 
+*
+* &String vs &str:
+*   For now: &String cannot be used for subtrings, i.e. they are slices, while &Strings always
+*   references the whole thing (See: https://users.rust-lang.org/t/whats-the-difference-between-string-and-str/10177/2).
+*
 * */
 impl EvaluationContext {
     fn new(variables: HashMap<String, f64>, functions: HashMap<String, fn(Vec<f64>) -> f64>) -> Self {      
@@ -213,6 +218,13 @@ impl EvaluationContext {
 
     fn set_function(&mut self, function: String, value: fn(Vec<f64>) -> f64) {
         self.functions.insert(function, value);
+    }
+
+    fn get_variable(&self, variable: &str) -> Option<f64>{
+        self.variables.get(variable).copied()
+    }
+    fn get_function(&self, function: &str) -> Option<fn(Vec<f64>) -> f64> {
+        self.functions.get(function).copied()
     }
 
 }
