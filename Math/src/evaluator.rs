@@ -237,4 +237,12 @@ impl DetailedEvaluationResult {
     fn err(error: EvaluationError) -> Self {
         Self { value: Err(error), steps: Vec::new() }
     }
+    fn with_step(mut self, step: String) -> Self {
+        self.steps.push(step);
+        self
+    }
+    fn with_steps(mut self, steps: Vec<String>) -> Self {
+        self.steps.extend(steps);
+        self
+    }
 }
