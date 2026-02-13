@@ -246,3 +246,20 @@ impl DetailedEvaluationResult {
         self
     }
 }
+
+fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationResult {
+    match node {
+        ASTNode::Number(n) => {
+            DetailedEvaluationResult::ok(*n)
+        },
+        ASTNode::Variable(name) => {
+            if let Some(value) = context.get_variable(name) {
+                DetailedEvaluationResult::ok(value)
+            } else {
+                DetailedEvaluationResult::err(EvaluationError::UndefinedVariable(name.clone()))
+            }
+
+        }
+        _ => todo!()
+    }
+}
