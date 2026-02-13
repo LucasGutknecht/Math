@@ -228,3 +228,13 @@ impl EvaluationContext {
     }
 
 }
+
+
+impl DetailedEvaluationResult {
+    fn ok(value: f64) -> Self {
+        Self { value: Ok(value), steps: Vec::new() }
+    }
+    fn err(error: EvaluationError) -> Self {
+        Self { value: Err(error), steps: Vec::new() }
+    }
+}
