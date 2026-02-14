@@ -290,7 +290,22 @@ fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationRe
                     DetailedEvaluationResult::err(e).with_steps(left_result.steps)
                 }
             }
-        }
+        },
+        ASTNode::Function { name, argument } => {
+            let arg_result = evaluate(argument, context);
+            match arg_result.value {
+                Ok(arg_val) => {
+                    if let Some(func) = context.get_function(name) {
+                        DetailedEvaluationResult::ok(func(vec![arg_val]))
+                    } else {
+                        DetailedEvaluationResult::err(EvaluationError::UndefinedFunction(name.clone()))
+                    }
+                },
+                Err(e) => {
+                    DetailedEvaluationResult::err(e).with_steps(arg_result.steps)
+                }
+            }
+        },
 
         _ => todo!()
     }
