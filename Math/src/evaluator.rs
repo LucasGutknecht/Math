@@ -307,6 +307,20 @@ fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationRe
             }
         },
 
-        _ => todo!()
+        ASTNode::UnaryOperator { operator, operand } => {
+            let operand_result = evaluate(operand, context);
+            match operand_result.value {
+                Ok(operand_val) => {
+                    match operator {
+                        '-' => DetailedEvaluationResult::ok(-operand_val),
+                        '+' => DetailedEvaluationResult::ok(+operand_val),
+                        _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError("Unknown operator".to_string()))
+                    }
+                },
+                Err(e) =>{
+                    DetailedEvaluationResult::err(e).with_steps(operand_result.steps)
+                }
+            }
+        }
     }
 }
