@@ -258,8 +258,40 @@ fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationRe
             } else {
                 DetailedEvaluationResult::err(EvaluationError::UndefinedVariable(name.clone()))
             }
+        },
+        ASTNode::Operator { operator, left, right } => {
+            let left_result = evaluate(left, context);
 
+            match left_result.value {
+                Ok(left_val) => {
+                    let right_result = evaluate(right, context);
+                    match right_result.value {
+                        Ok(right_val) => {
+                            match operator {
+                                '+' => DetailedEvaluationResult::ok(left_val + right_val),
+                                '-' => DetailedEvaluationResult::ok(left_val - right_val),
+                                '*' => DetailedEvaluationResult::ok(left_val * right_val),
+                                '/' => {
+                                    if right_val == 0.0 {
+                                        DetailedEvaluationResult::err(EvaluationError::DivisionByZero)
+                                    }else {
+                                        DetailedEvaluationResult::ok(left_val / right_val)
+                                    }
+                                },
+                                _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError("Unknown operator".to_string()))
+                            }
+                        },
+                        Err(e) => {
+                            DetailedEvaluationResult::err(e).with_steps(right_result.steps)
+                        }
+                    }
+                },
+                Err(e) => {
+                    DetailedEvaluationResult::err(e).with_steps(left_result.steps)
+                }
+            }
         }
+
         _ => todo!()
     }
 }
