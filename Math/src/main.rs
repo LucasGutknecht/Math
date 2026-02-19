@@ -8,7 +8,7 @@ use parser::Parser;
 use std::collections::HashMap;
 
 fn main() {
-    let expression: String = "3 + 5 * 2".to_string();
+    let expression: String = "(3 + (5 - (3 * sqrt(16)))) * 2".to_string();
     let mut lexer = Lexer::new(expression);
     let tokens = lexer.tokenize();
     let mut parser = Parser::new(tokens);

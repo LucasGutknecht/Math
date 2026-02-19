@@ -1,6 +1,6 @@
 // The evaluator.rs file
 
-use std::{collections::HashMap, fmt::format, result};
+use std::collections::HashMap;
 
 /*
 
@@ -52,6 +52,7 @@ ninth token: right_parenthesis(')')
 On the Rust convention, I should use Pascal case for struct and enum names, and snake_case for variable and function names.
 */
 #[derive(Clone)]
+#[allow(dead_code)]
 pub enum ExpressionTokens {
     Number(f64),
     Operator(char),
@@ -126,6 +127,7 @@ pub enum ExpressionTokens {
   5. Define the Variable variant to represent variables, including a field for the variable name.
   6. Use Box to allocate child nodes on the heap, enabling recursive structures.
 */
+#[allow(dead_code)]
 pub enum ASTNode {
     // Leaf node representing a number
     Number(f64),
@@ -189,6 +191,7 @@ pub struct DetailedEvaluationResult {
    4 - SyntaxError(String) -> error when there is a syntax error in the expression being evaluated.
 */
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum EvaluationError {
     DivisionByZero,
     UndefinedVariable(String),
@@ -207,6 +210,7 @@ pub enum EvaluationError {
 *   references the whole thing (See: https://users.rust-lang.org/t/whats-the-difference-between-string-and-str/10177/2).
 *
 * */
+#[allow(dead_code)]
 impl EvaluationContext {
     pub fn new(
         variables: HashMap<String, f64>,

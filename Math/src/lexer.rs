@@ -2,7 +2,7 @@
 * Lexer file
 * */
 
-use crate::evaluator::{ASTNode, ExpressionTokens};
+use crate::evaluator::ExpressionTokens;
 
 /*
   The lexer job is to take the raw input string and convert it into a series of tokens that can be easily processed by the parser.

@@ -14,6 +14,7 @@ use crate::evaluator::{ASTNode, ExpressionTokens};
 *   Both, lbp and rbp use the type i32 (Which is a 32-bit signed integer type as in: https://doc.rust-lang.org/std/primitive.i32.html)
 *
 * */
+#[allow(dead_code)]
 struct BindPower {
     operator: char,
     lbp: i32,
