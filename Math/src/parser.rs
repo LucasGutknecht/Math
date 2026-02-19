@@ -1,15 +1,16 @@
 /* The parser file*/
 
+use crate::evaluator::{ASTNode, ExpressionTokens};
 
-/* 
+/*
 * This struct details the BindPower which consists of:
 *   - Operator of the type char, which receives the operator itself.
 *   - LBP(Left bind power): Which is the bind power of the given operator is in how tight it
-*   attracts its operands on the left. 
-*   - RBP(Right bind power): Entails the bind power of the given operator on how tight it attracts its operands from the right. 
-*   
-*   As example: if the left of the operator + as a bind of 10 and its right has a bind of 9, given 3 + 4 + 5, it would evaluate (3 + 4) + 5. 
-*   
+*   attracts its operands on the left.
+*   - RBP(Right bind power): Entails the bind power of the given operator on how tight it attracts its operands from the right.
+*
+*   As example: if the left of the operator + as a bind of 10 and its right has a bind of 9, given 3 + 4 + 5, it would evaluate (3 + 4) + 5.
+*
 *   Both, lbp and rbp use the type i32 (Which is a 32-bit signed integer type as in: https://doc.rust-lang.org/std/primitive.i32.html)
 *
 * */
@@ -21,7 +22,7 @@ struct BindPower {
 
 /*
 * This struct details the Parser which consists of:
-*   
+*
 *   - Position of the type usize, which is a primitive pointer-sized unsigned integer. It takes to
 *   reference how many bytes into locations of the memory. Thats being, it maximum value is 2^64 -1
 *   on 64-bit targets. And the minimum is Zero. TLDR: Most of the rust integer types use consistent
@@ -71,14 +72,13 @@ struct BindPower {
 * know the position and the tokens akin of that position on the evaluator.
 * */
 
-struct Parser {
+pub struct Parser {
     position: usize,
-    tokens: Vec<ExpressionTokens>
+    tokens: Vec<ExpressionTokens>,
 }
 
-
 /*
-* The following is the implementation of the BindPower struct. 
+* The following is the implementation of the BindPower struct.
 *
 * It has the get_bind_power function which has a char as param and returns an Option with a tuple
 * with two i32 meaning the lbp and rbp. Option, means either Some value or None (See: https://doc.rust-lang.org/std/option/).
@@ -90,19 +90,14 @@ struct Parser {
 *   We could say the most powerful operator is *
 *
 * */
-impl BindPower{
+impl BindPower {
     fn get_bind_power(ch: char) -> Option<(i32, i32)> {
         match ch {
-            '+' | '-' => {
-                return Some((10, 9))
-            },
-            '*' | '/' => {
-                return Some((20, 19))
-            },
+            '+' | '-' => return Some((10, 9)),
+            '*' | '/' => return Some((20, 19)),
             _ => None,
-        }  
+        }
     }
-
 }
 
 /*
@@ -121,48 +116,48 @@ impl BindPower{
 *
 * */
 impl Parser {
-    fn new(tokens: Vec<ExpressionTokens>) -> Self {
-        Parser { position: 0, tokens }
+    pub fn new(tokens: Vec<ExpressionTokens>) -> Self {
+        Parser {
+            position: 0,
+            tokens,
+        }
     }
 
     fn peek(&self) -> Option<&ExpressionTokens> {
         self.tokens.get(self.position)
     }
-    
+
     fn advance(&mut self) {
         self.position += 1;
     }
 
-    fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode>{
-        let mut left = match self.peek() {
+    fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode> {
+        let mut left = match self.peek().cloned() {
             Some(ExpressionTokens::Number(token)) => {
                 self.advance();
-                ASTNode::Number(*token)
-            },
+                ASTNode::Number(token)
+            }
             Some(ExpressionTokens::Variable(token)) => {
                 self.advance();
-                ASTNode::Variable(token.clone())
-            },
+                ASTNode::Variable(token)
+            }
             Some(ExpressionTokens::LeftParenthesis) => {
                 self.advance();
                 let inner = self.parse_expression(0)?;
-                match self.peek(){
+                match self.peek().cloned() {
                     Some(ExpressionTokens::RightParenthesis) => self.advance(),
                     _ => return None,
                 }
                 inner
-            },
-            _ => {
-                return None
             }
+            _ => return None,
         };
-            
-        loop{
-            
-            let token = self.peek();
+
+        loop {
+            let token = self.peek().cloned();
             match token {
                 Some(ExpressionTokens::Operator(token)) => {
-                    let (lbp, rbp)  = match BindPower::get_bind_power(*token) {
+                    let (lbp, rbp) = match BindPower::get_bind_power(token) {
                         Some(bp) => bp,
                         None => break,
                     };
@@ -170,7 +165,7 @@ impl Parser {
                         break;
                     }
 
-                    let op = *token;
+                    let op = token;
                     self.advance();
 
                     let right = self.parse_expression(rbp)?;
@@ -180,15 +175,14 @@ impl Parser {
                         left: Box::new(left),
                         right: Box::new(right),
                     };
-
-                },
-                _ => break
+                }
+                _ => break,
             }
         }
         Some(left)
     }
 
-    fn parse(&mut self) -> Option<ASTNode> {
+    pub fn parse(&mut self) -> Option<ASTNode> {
         self.parse_expression(0)
     }
 }

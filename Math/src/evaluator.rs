@@ -51,7 +51,8 @@ ninth token: right_parenthesis(')')
 
 On the Rust convention, I should use Pascal case for struct and enum names, and snake_case for variable and function names.
 */
-enum ExpressionTokens {
+#[derive(Clone)]
+pub enum ExpressionTokens {
     Number(f64),
     Operator(char),
     Function(String),
@@ -125,7 +126,7 @@ enum ExpressionTokens {
   5. Define the Variable variant to represent variables, including a field for the variable name.
   6. Use Box to allocate child nodes on the heap, enabling recursive structures.
 */
-enum ASTNode {
+pub enum ASTNode {
     // Leaf node representing a number
     Number(f64),
 
@@ -163,7 +164,7 @@ enum ASTNode {
    3 -> Return values using their keys.
 
 */
-struct EvaluationContext {
+pub struct EvaluationContext {
     variables: HashMap<String, f64>,
     functions: HashMap<String, fn(Vec<f64>) -> f64>,
 }
@@ -175,9 +176,9 @@ struct EvaluationContext {
   steps: Vec<String> -> a vector of strings representing the steps taken during the evaluation process.
   errors: Vec<String> -> a vector of strings representing any errors encountered during the evaluation process
 */
-struct DetailedEvaluationResult {
-    value: Result<f64, EvaluationError>,
-    steps: Vec<String>,
+pub struct DetailedEvaluationResult {
+    pub value: Result<f64, EvaluationError>,
+    pub steps: Vec<String>,
 }
 
 /*
@@ -187,7 +188,8 @@ struct DetailedEvaluationResult {
    3 - UndefinedFunction(String) -> error when a function used in the expression is not defined in the context.
    4 - SyntaxError(String) -> error when there is a syntax error in the expression being evaluated.
 */
-enum EvaluationError {
+#[derive(Debug)]
+pub enum EvaluationError {
     DivisionByZero,
     UndefinedVariable(String),
     UndefinedFunction(String),
@@ -206,7 +208,7 @@ enum EvaluationError {
 *
 * */
 impl EvaluationContext {
-    fn new(
+    pub fn new(
         variables: HashMap<String, f64>,
         functions: HashMap<String, fn(Vec<f64>) -> f64>,
     ) -> Self {
@@ -233,7 +235,7 @@ impl EvaluationContext {
 }
 
 impl DetailedEvaluationResult {
-    fn ok(value: f64) -> Self {
+    pub fn ok(value: f64) -> Self {
         Self {
             value: Ok(value),
             steps: Vec::new(),
@@ -255,7 +257,7 @@ impl DetailedEvaluationResult {
     }
 }
 
-fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationResult {
+pub fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationResult {
     match node {
         ASTNode::Number(n) => DetailedEvaluationResult::ok(*n),
         ASTNode::Variable(name) => {

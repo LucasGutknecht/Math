@@ -1,9 +1,27 @@
 mod evaluator;
-fn main() {
-    println!("Hello, world!");
-}
+mod lexer;
+mod parser;
 
-// Finding the domain of the function
-fn find_domain() {
-    todo!();
+use evaluator::{EvaluationContext, evaluate};
+use lexer::Lexer;
+use parser::Parser;
+use std::collections::HashMap;
+
+fn main() {
+    let expression: String = "3 + 5 * 2".to_string();
+    let mut lexer = Lexer::new(expression);
+    let tokens = lexer.tokenize();
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    match ast {
+        Some(ast) => {
+            let context = EvaluationContext::new(HashMap::new(), HashMap::new());
+            let result = evaluate(&ast, &context);
+            println!("Steps: {:?}", result.steps);
+            println!("Result: {:?}", result.value);
+        }
+        None => {
+            println!("Parse error")
+        }
+    }
 }
