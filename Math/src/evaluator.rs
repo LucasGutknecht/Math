@@ -1,6 +1,6 @@
 // The evaluator.rs file
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::format, result};
 
 /*
 
@@ -180,7 +180,6 @@ struct DetailedEvaluationResult {
     steps: Vec<String>,
 }
 
-
 /*
   Here we define possible errors that can occur during the evaluation process:
    1 - DivisionByZero -> error when there is an attempt to divide by zero.
@@ -195,12 +194,11 @@ enum EvaluationError {
     SyntaxError(String),
 }
 
-
 /*
 * This is EvaluationContext implementation. The objective is to tell the evaluator the context
 * necessary for the evaluation. If the expression has no need for context, the method would just
 * pass as it is... while expressions with contexts like Variables or Functions, the methods of the
-* EvaluationContext should be able to tell the evaluator the needed context. 
+* EvaluationContext should be able to tell the evaluator the needed context.
 *
 * &String vs &str:
 *   For now: &String cannot be used for subtrings, i.e. they are slices, while &Strings always
@@ -208,8 +206,14 @@ enum EvaluationError {
 *
 * */
 impl EvaluationContext {
-    fn new(variables: HashMap<String, f64>, functions: HashMap<String, fn(Vec<f64>) -> f64>) -> Self {      
-        Self {variables, functions}
+    fn new(
+        variables: HashMap<String, f64>,
+        functions: HashMap<String, fn(Vec<f64>) -> f64>,
+    ) -> Self {
+        Self {
+            variables,
+            functions,
+        }
     }
 
     fn set_variable(&mut self, variable: String, value: f64) {
@@ -220,22 +224,26 @@ impl EvaluationContext {
         self.functions.insert(function, value);
     }
 
-    fn get_variable(&self, variable: &str) -> Option<f64>{
+    fn get_variable(&self, variable: &str) -> Option<f64> {
         self.variables.get(variable).copied()
     }
     fn get_function(&self, function: &str) -> Option<fn(Vec<f64>) -> f64> {
         self.functions.get(function).copied()
     }
-
 }
-
 
 impl DetailedEvaluationResult {
     fn ok(value: f64) -> Self {
-        Self { value: Ok(value), steps: Vec::new() }
+        Self {
+            value: Ok(value),
+            steps: Vec::new(),
+        }
     }
     fn err(error: EvaluationError) -> Self {
-        Self { value: Err(error), steps: Vec::new() }
+        Self {
+            value: Err(error),
+            steps: Vec::new(),
+        }
     }
     fn with_step(mut self, step: String) -> Self {
         self.steps.push(step);
@@ -249,77 +257,115 @@ impl DetailedEvaluationResult {
 
 fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluationResult {
     match node {
-        ASTNode::Number(n) => {
-            DetailedEvaluationResult::ok(*n)
-        },
+        ASTNode::Number(n) => DetailedEvaluationResult::ok(*n),
         ASTNode::Variable(name) => {
             if let Some(value) = context.get_variable(name) {
                 DetailedEvaluationResult::ok(value)
             } else {
                 DetailedEvaluationResult::err(EvaluationError::UndefinedVariable(name.clone()))
             }
-        },
-        ASTNode::Operator { operator, left, right } => {
+        }
+        ASTNode::Operator {
+            operator,
+            left,
+            right,
+        } => {
             let left_result = evaluate(left, context);
 
             match left_result.value {
                 Ok(left_val) => {
                     let right_result = evaluate(right, context);
                     match right_result.value {
-                        Ok(right_val) => {
-                            match operator {
-                                '+' => DetailedEvaluationResult::ok(left_val + right_val),
-                                '-' => DetailedEvaluationResult::ok(left_val - right_val),
-                                '*' => DetailedEvaluationResult::ok(left_val * right_val),
-                                '/' => {
-                                    if right_val == 0.0 {
-                                        DetailedEvaluationResult::err(EvaluationError::DivisionByZero)
-                                    }else {
-                                        DetailedEvaluationResult::ok(left_val / right_val)
-                                    }
-                                },
-                                _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError("Unknown operator".to_string()))
+                        Ok(right_val) => match operator {
+                            '+' => {
+                                let result = left_val + right_val;
+                                let step: String =
+                                    format!("{} + {} = {}", left_val, right_val, result);
+                                DetailedEvaluationResult::ok(result)
+                                    .with_steps(left_result.steps)
+                                    .with_steps(right_result.steps)
+                                    .with_step(step)
                             }
+                            '-' => {
+                                let result = left_val - right_val;
+                                let step: String =
+                                    format!("{} - {} = {}", left_val, right_val, result);
+                                DetailedEvaluationResult::ok(result)
+                                    .with_steps(left_result.steps)
+                                    .with_steps(right_result.steps)
+                                    .with_step(step)
+                            }
+                            '*' => {
+                                let result = left_val * right_val;
+                                let step: String =
+                                    format!("{} * {} = {}", left_val, right_val, result);
+                                DetailedEvaluationResult::ok(result)
+                                    .with_steps(left_result.steps)
+                                    .with_steps(right_result.steps)
+                                    .with_step(step)
+                            }
+                            '/' => {
+                                if right_val == 0.0 {
+                                    DetailedEvaluationResult::err(EvaluationError::DivisionByZero)
+                                } else {
+                                    let result = left_val / right_val;
+                                    let step: String =
+                                        format!("{} / {} = {}", left_val, right_val, result);
+                                    DetailedEvaluationResult::ok(result)
+                                        .with_steps(left_result.steps)
+                                        .with_steps(right_result.steps)
+                                        .with_step(step)
+                                }
+                            }
+                            _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError(
+                                "Unknown operator".to_string(),
+                            )),
                         },
-                        Err(e) => {
-                            DetailedEvaluationResult::err(e).with_steps(right_result.steps)
-                        }
+                        Err(e) => DetailedEvaluationResult::err(e).with_steps(right_result.steps),
                     }
-                },
-                Err(e) => {
-                    DetailedEvaluationResult::err(e).with_steps(left_result.steps)
                 }
+                Err(e) => DetailedEvaluationResult::err(e).with_steps(left_result.steps),
             }
-        },
+        }
         ASTNode::Function { name, argument } => {
             let arg_result = evaluate(argument, context);
             match arg_result.value {
                 Ok(arg_val) => {
                     if let Some(func) = context.get_function(name) {
-                        DetailedEvaluationResult::ok(func(vec![arg_val]))
+                        let result = func(vec![arg_val]);
+                        let step = format!("{}({}) = {}", name, arg_val, result);
+                        DetailedEvaluationResult::ok(result)
+                            .with_steps(arg_result.steps)
+                            .with_step(step)
                     } else {
-                        DetailedEvaluationResult::err(EvaluationError::UndefinedFunction(name.clone()))
+                        DetailedEvaluationResult::err(EvaluationError::UndefinedFunction(
+                            name.clone(),
+                        ))
                     }
-                },
-                Err(e) => {
-                    DetailedEvaluationResult::err(e).with_steps(arg_result.steps)
                 }
+                Err(e) => DetailedEvaluationResult::err(e).with_steps(arg_result.steps),
             }
-        },
+        }
 
         ASTNode::UnaryOperator { operator, operand } => {
             let operand_result = evaluate(operand, context);
             match operand_result.value {
-                Ok(operand_val) => {
-                    match operator {
-                        '-' => DetailedEvaluationResult::ok(-operand_val),
-                        '+' => DetailedEvaluationResult::ok(+operand_val),
-                        _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError("Unknown operator".to_string()))
+                Ok(operand_val) => match operator {
+                    '-' => {
+                        let result = -operand_val;
+                        let step = format!("-{} = {}", operand_val, result);
+                        DetailedEvaluationResult::ok(result)
+                            .with_steps(operand_result.steps)
+                            .with_step(step)
                     }
+                    '+' => {
+                        DetailedEvaluationResult::ok(operand_val).with_steps(operand_result.steps)
+                    }
+                    _ => DetailedEvaluationResult::err(EvaluationError::SyntaxError(
+                        "Unknown operator".to_string(),
+                    )),
                 },
-                Err(e) =>{
-                    DetailedEvaluationResult::err(e).with_steps(operand_result.steps)
-                }
+                Err(e) => DetailedEvaluationResult::err(e).with_steps(operand_result.steps),
             }
         }
     }
