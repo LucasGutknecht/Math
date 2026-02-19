@@ -207,9 +207,7 @@ impl Lexer {
         let ch = self.peek()?;
 
         match ch {
-            '0'..='9' => {
-                return Some(ExpressionTokens::Number(self.read_number()));
-            }
+            '0'..='9' => Some(ExpressionTokens::Number(self.read_number())),
             '(' => {
                 self.advance();
                 Some(ExpressionTokens::LeftParenthesis)
@@ -222,9 +220,7 @@ impl Lexer {
                 self.advance();
                 Some(ExpressionTokens::Operator(ch))
             }
-            'a'..='z' | 'A'..='Z' | '_' => {
-                return Some(ExpressionTokens::Variable(self.read_identifier()));
-            }
+            'a'..='z' | 'A'..='Z' | '_' => Some(ExpressionTokens::Variable(self.read_identifier())),
             _ => {
                 self.advance();
                 None

@@ -94,8 +94,8 @@ pub struct Parser {
 impl BindPower {
     fn get_bind_power(ch: char) -> Option<(i32, i32)> {
         match ch {
-            '+' | '-' => return Some((10, 9)),
-            '*' | '/' => return Some((20, 19)),
+            '+' | '-' => Some((10, 9)),
+            '*' | '/' => Some((20, 19)),
             _ => None,
         }
     }
@@ -138,9 +138,22 @@ impl Parser {
                 self.advance();
                 ASTNode::Number(token)
             }
-            Some(ExpressionTokens::Variable(token)) => {
+            Some(ExpressionTokens::Variable(name)) => {
                 self.advance();
-                ASTNode::Variable(token)
+                if let Some(ExpressionTokens::LeftParenthesis) = self.peek().cloned() {
+                    self.advance();
+                    let argument = self.parse_expression(0)?;
+                    match self.peek().cloned() {
+                        Some(ExpressionTokens::RightParenthesis) => self.advance(),
+                        _ => return None,
+                    }
+                    ASTNode::Function {
+                        name,
+                        argument: Box::new(argument),
+                    }
+                } else {
+                    ASTNode::Variable(name)
+                }
             }
             Some(ExpressionTokens::LeftParenthesis) => {
                 self.advance();

@@ -15,7 +15,8 @@ fn main() {
     let ast = parser.parse();
     match ast {
         Some(ast) => {
-            let context = EvaluationContext::new(HashMap::new(), HashMap::new());
+            let mut context = EvaluationContext::new(HashMap::new(), HashMap::new());
+            context.set_function("sqrt".to_string(), |args| args[0].sqrt());
             let result = evaluate(&ast, &context);
             println!("Steps: {:?}", result.steps);
             println!("Result: {:?}", result.value);

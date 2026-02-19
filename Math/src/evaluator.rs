@@ -226,7 +226,7 @@ impl EvaluationContext {
         self.variables.insert(variable, value);
     }
 
-    fn set_function(&mut self, function: String, value: fn(Vec<f64>) -> f64) {
+    pub fn set_function(&mut self, function: String, value: fn(Vec<f64>) -> f64) {
         self.functions.insert(function, value);
     }
 
