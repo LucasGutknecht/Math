@@ -1,4 +1,27 @@
-# Math
+Math
+A Mathematical Expression Evaluator in Rust
+
+1. Introduction
+What is Math?
+Math is a mathematical expression evaluator written in Rust. It takes a string representing a mathematical expression, parses it, and evaluates it to produce a numerical result.
+Given an input like:
+3+5×(2−8)3 + 5 \times (2 - 8)3+5×(2−8)
+The tool will:
+11
+1 →\rightarrow
+→ Break the string into tokens (numbers, operators, parentheses).
+
+22
+2 →\rightarrow
+→ Build a tree structure that respects operator precedence.
+
+33
+3 →\rightarrow
+→ Walk the tree to compute the final result.
+
+44
+4 →\rightarrow
+→ Return the result along with a trace of evaluation steps.
 
 ---
 
