@@ -1,4 +1,5 @@
 # Math
+
 ---
 
 ## 1. Motivation: Why a Flat Struct Doesn't Work
@@ -581,6 +582,288 @@ pub fn evaluate(node: &ASTNode, context: &EvaluationContext) -> DetailedEvaluati
                 Err(e) => DetailedEvaluationResult::err(e).with_steps(operand_result.steps),
             }
         }
+    }
+}
+```
+
+## 9. The Lexer
+
+File: src/lexer.rs
+
+The lexer's job is to take the raw input string and convert it into a series of tokens that can be easily processed by the parser.
+
+Each token represents a meaningful unit in the mathematical expression, such as numbers, operators, parentheses, functions, and variables.
+
+### Struct Fields
+
+|Field|Type|Description|
+|---|---|---|
+|position|$\text{usize}$|the current position in the input string that the lexer is processing.|
+|input|$\text{String}$|the raw string input that the lexer will process.|
+
+### Why Not Use `current_char` and `token` as Fields?
+
+- **current_char:** Given that the lexer's job is to create tokens, there is no need to compute the next token at the exact moment we are processing the actual token. The future computation should be done in the future.
+- **token:** The lexer should not hold the current token as a field, because the lexer is responsible for generating tokens from the input string, not storing them. The tokens should be generated on-the-fly as needed.
+
+### Lexer Process Example
+
+Example of how the lexer would see the expression $(3 + 5 \times (2 - 8))$:
+
+|Position|Character|Action|
+|---|---|---|
+|0|`(`|token|
+|1|`3`|token|
+|2||whitespace, skip|
+|3|`+`|token|
+|4||whitespace, skip|
+|5|`5`|token|
+|6||whitespace, skip|
+|7|`*`|token|
+|8||whitespace, skip|
+|9|`(`|token|
+|10|`2`|token|
+|11||whitespace, skip|
+|12|`-`|token|
+|13||whitespace, skip|
+|14|`8`|token|
+|15|`)`|token|
+|16|`)`|token|
+
+---
+
+## 10. Lexer Implementation Rules
+
+File: src/lexer.rs
+
+How do we implement the lexer? What underlying rules should we follow? What logic to implement?
+
+### Step-by-Step Rules
+
+$1$ $\rightarrow$ **Define tokens and non-tokens** (whitespaces, invalid characters, etc.). The data here are raw strings and positions.
+
+Example: `"3 + 5 * (2 - 8)"` $\to$ tokens: $[3, +, 5, \times, (, 2, -, 8, )]$
+
+$2$ $\rightarrow$ **Define patterns** to be matched for each token type (numbers, operators, functions, variables, parentheses). The data here are patterns and identifiers.
+
+Example: `number_pattern = r"\d+(\.\d+)?"`
+
+$3$ $\rightarrow$ **Implement logic** to iterate on which pattern to apply and when. The data here are rules and conditions.
+
+Example: if `current_char` is digit $\to$ match `number_pattern`
+
+$4$ $\rightarrow$ **Create tokens** based on the matched patterns and store them in a structured format (like an enum or struct). The data here are tokens and types.
+
+Example: `Token::Number(3.0)`, `Token::Operator('+')`
+
+$5$ $\rightarrow$ **Handle errors** for invalid characters or sequences. The data here are error types and messages.
+
+Example: `Error::InvalidCharacter('@')`
+
+$6$ $\rightarrow$ **Return the list of tokens** for further processing by the parser. The data here are token lists and structures.
+
+Example: `vec![Token::Number(3.0), Token::Operator('+'), Token::Number(5.0), ...]`
+
+---
+
+## 11. Lexer Methods
+
+File: src/lexer.rs
+
+### Method Overview
+
+|Method|Signature|Description|
+|---|---|---|
+|`new`|`(String) -> Self`|initializes the lexer with the input string at position 0.|
+|`peek`|`(&self) -> Option<char>`|returns the current character without advancing the position.|
+|`advance`|`(&mut self)`|advances the position to the next character.|
+|`skip_whitespace`|`(&mut self)`|skips all whitespace characters from current position.|
+|`read_number`|`(&mut self) -> f64`|reads consecutive digits and dots, parses them as $f64$.|
+|`read_identifier`|`(&mut self) -> String`|reads consecutive alphanumeric characters and underscores.|
+|`next_token`|`(&mut self) -> Option<ExpressionTokens>`|returns the next token, or `None` if input is exhausted.|
+|`tokenize`|`(&mut self) -> Vec<ExpressionTokens>`|consumes all input and returns a vector of tokens.|
+
+### Method: `skip_whitespace`
+
+The idea here is to run `skip_whitespace`, which gives us a notion of whether the current character is a whitespace or not. It does that by generating a loop using `while`, where we take the `peek` results and map them using the `map_or` method.
+
+The `map_or` method works like this:
+
+```
+map_or<U, F>(default_value, closure)
+```
+
+- If the Option is `None`, return the default value.
+- If the Option is `Some(x)`, apply the closure to `x` and return the result.
+
+Example:
+
+```rust
+let x = Some("foo");
+assert_eq!(x.map_or(42, |v| v.len()), 3);
+
+let x: Option<&str> = None;
+assert_eq!(x.map_or(42, |v| v.len()), 42);
+```
+
+### Method: `read_number`
+
+The idea here is to run `read_number` to check if the char is a number or dot, and return `false` if not in the while block.
+
+Given that we cannot access the context of the `ch` from `map_or` (since it only exists there), we may access the `ch` from the `peek` method itself. If it exists, it pushes the `ch` into the string, appending the value.
+
+After that, advance until the end of the while loop.
+
+The method `read_number` expects a return of the type $f64$. To achieve this, we must use the `parse` method of the `String` type:
+
+```rust
+the_string.parse::<f64>().unwrap()
+```
+
+- `::<>` $\rightarrow$ this syntax is called **turbofish**; it indicates directly to the program the type you want to parse into.
+- `unwrap()` $\rightarrow$ this method helps us retrieve the parsed value directly (`Some`) and returns a panic if the result is `None`.
+
+### Method: `next_token`
+
+The function `next_token` is expected to return the next token of the lexer.
+
+The function returns a type `ExpressionTokens` encapsulated by `Option`. The `Option` is an enum used to handle the absence of a value, eliminating null pointer errors:
+
+$$\text{Option}\langle T \rangle \to T = \text{Types}$$
+
+Returns:
+
+- $\text{Some}(T)$ $\rightarrow$ whichever variant that takes the value of type $T$.
+- $\text{None}$ $\rightarrow$ whichever variant that takes the absence of value; `None` can be assigned directly as `None` (without the `;` at the end).
+
+The function takes as param `&mut self`:
+
+- `self` $\rightarrow$ the method takes ownership of the instance.
+- `&self` $\rightarrow$ the method borrows the instance immutably.
+- `&mut self` $\rightarrow$ the method borrows the instance mutably.
+
+The function operates in the following steps:
+
+$1$ $\rightarrow$ Assert that the actual char is not a whitespace by calling `skip_whitespace`.
+
+$2$ $\rightarrow$ Put the current char into a variable; using `?` will assert that if the value is not what we expected, return `None`.
+
+$3$ $\rightarrow$ Match the char and execute the corresponding method:
+
+- If a digit from `'0'` to `'9'`, call `self.read_number()` which transforms the String into a number of type $f64$, encapsulated into a `Number` type established on the `ExpressionTokens` enum, wrapped in `Some()`.
+- The `_` option means everything else, returning `None`.
+
+### Method: `tokenize`
+
+The purpose of the function `tokenize` is to create a vector of the type `ExpressionTokens`.
+
+The function operates like:
+
+$1$ $\rightarrow$ Declare a new `Vec`.
+
+$2$ $\rightarrow$ Initialize a loop with `while let Some(token) = self.next_token()`:
+
+- If `Some`: push the token to the `Vec`.
+- `push`: Appends an element to the back of a collection.
+
+$3$ $\rightarrow$ At the end, return a vec of tokens like: `['(', '3', '+', '8', ')', '+', '5']`
+
+### Implementation
+
+```rust
+pub struct Lexer {
+    position: usize,
+    input: String,
+}
+
+impl Lexer {
+    pub fn new(input: String) -> Self {
+        Lexer { position: 0, input }
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.input.chars().nth(self.position)
+    }
+
+    fn advance(&mut self) {
+        self.position += 1;
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.peek().map_or(false, |ch| ch.is_whitespace()) {
+            self.advance();
+        }
+    }
+
+    fn read_number(&mut self) -> f64 {
+        let mut valores = String::new();
+
+        while self
+            .peek()
+            .map_or(false, |ch| ch.is_ascii_digit() || ch == '.')
+        {
+            if let Some(ch) = self.peek() {
+                valores.push(ch);
+            }
+            self.advance()
+        }
+
+        valores.parse::<f64>().unwrap()
+    }
+
+    fn read_identifier(&mut self) -> String {
+        let mut identificador = String::new();
+
+        while self
+            .peek()
+            .map_or(false, |ch| ch.is_alphanumeric() || ch == '_')
+        {
+            if let Some(ch) = self.peek() {
+                identificador.push(ch);
+            }
+            self.advance();
+        }
+
+        identificador
+    }
+
+    fn next_token(&mut self) -> Option<ExpressionTokens> {
+        self.skip_whitespace();
+
+        let ch = self.peek()?;
+
+        match ch {
+            '0'..='9' => Some(ExpressionTokens::Number(self.read_number())),
+            '(' => {
+                self.advance();
+                Some(ExpressionTokens::LeftParenthesis)
+            }
+            ')' => {
+                self.advance();
+                Some(ExpressionTokens::RightParenthesis)
+            }
+            '+' | '-' | '*' | '/' => {
+                self.advance();
+                Some(ExpressionTokens::Operator(ch))
+            }
+            'a'..='z' | 'A'..='Z' | '_' => {
+                Some(ExpressionTokens::Variable(self.read_identifier()))
+            }
+            _ => {
+                self.advance();
+                None
+            }
+        }
+    }
+
+    pub fn tokenize(&mut self) -> Vec<ExpressionTokens> {
+        let mut tokens = Vec::new();
+
+        while let Some(token) = self.next_token() {
+            tokens.push(token);
+        }
+
+        tokens
     }
 }
 ```
