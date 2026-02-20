@@ -4,7 +4,7 @@ A Mathematical Expression Evaluator in Rust
 
 ---
 
-## 1. Introduction
+## Introduction
 
 ### What is Math?
 
