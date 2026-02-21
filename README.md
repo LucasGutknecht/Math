@@ -891,3 +891,484 @@ impl Lexer {
     }
 }
 ```
+## 12. The Parser
+
+File: src/parser.rs
+
+The parser's job is to take the token vector produced by the lexer and build an Abstract Syntax Tree (AST) that respects operator precedence.
+
+The parser uses the **Pratt parsing algorithm** (also known as "top-down operator precedence parsing"), which elegantly handles operator precedence and associativity without requiring explicit grammar rules.
+
+### Key Concept: Binding Power
+
+The core idea of Pratt parsing is **binding power**. Each operator has two binding powers:
+
+- **Left Binding Power (LBP)** $\rightarrow$ how tightly the operator attracts the operand on its left.
+- **Right Binding Power (RBP)** $\rightarrow$ how tightly the operator attracts the operand on its right.
+
+When two operators compete for an operand, the one with higher binding power wins.
+
+---
+
+## 13. BindPower Struct
+
+File: src/parser.rs
+
+This struct details the `BindPower` which consists of:
+
+|Field|Type|Description|
+|---|---|---|
+|operator|$\text{char}$|the operator character itself.|
+|lbp|$\text{i32}$|left binding power -- how tightly it attracts operands on the left.|
+|rbp|$\text{i32}$|right binding power -- how tightly it attracts operands on the right.|
+
+### Associativity
+
+The relationship between LBP and RBP determines associativity:
+
+|Relationship|Associativity|Example|
+|---|---|---|
+|$\text{LBP} > \text{RBP}$|left-to-right|$8 - 3 - 2 = (8 - 3) - 2 = 3$|
+|$\text{LBP} < \text{RBP}$|right-to-left|$2^{3^2} = 2^{(3^2)} = 512$|
+
+### Example
+
+If the operator $+$ has $\text{LBP} = 10$ and $\text{RBP} = 9$, given $3 + 4 + 5$:
+
+- The first $+$ has LBP 10.
+- The second $+$ has LBP 10, but it must compete against the first's RBP of 9.
+- Since $10 > 9$, the second $+$ cannot steal the $4$ from the first.
+- Result: $(3 + 4) + 5$.
+
+### Type: i32
+
+Both `lbp` and `rbp` use the type $\text{i32}$, which is a 32-bit signed integer type.
+
+See: https://doc.rust-lang.org/std/primitive.i32.html
+
+### Implementation
+
+```rust
+#[allow(dead_code)]
+struct BindPower {
+    operator: char,
+    lbp: i32,
+    rbp: i32,
+}
+```
+
+> Note: The struct fields are not used directly; only the `get_bind_power` function is used. The struct exists for conceptual clarity.
+
+---
+
+## 14. BindPower Implementation
+
+File: src/parser.rs
+
+The implementation of `BindPower` contains a single function: `get_bind_power`.
+
+### Method: `get_bind_power`
+
+|Signature|`fn get_bind_power(ch: char) -> Option<(i32, i32)>`|
+|---|---|
+|Input|a character representing an operator.|
+|Output|`Some((lbp, rbp))` if known operator, `None` otherwise.|
+
+The function returns an `Option` with a tuple containing two $\text{i32}$ values meaning the LBP and RBP.
+
+`Option` means either `Some` value or `None`. See: https://doc.rust-lang.org/std/option/
+
+### Binding Power Values
+
+|Operator|LBP|RBP|Precedence|
+|---|---|---|---|
+|$+$|10|9|low|
+|$-$|10|9|low|
+|$\times$|20|19|high|
+|$\div$|20|19|high|
+
+Higher numbers mean higher precedence. The $\times$ operator will "grab" operands before $+$ can.
+
+All operators shown are left-associative ($\text{LBP} > \text{RBP}$).
+
+### Implementation
+
+```rust
+impl BindPower {
+    fn get_bind_power(ch: char) -> Option<(i32, i32)> {
+        match ch {
+            '+' | '-' => Some((10, 9)),
+            '*' | '/' => Some((20, 19)),
+            _ => None,
+        }
+    }
+}
+```
+
+---
+
+## 15. Parser Struct
+
+File: src/parser.rs
+
+This struct details the `Parser` which consists of:
+
+|Field|Type|Description|
+|---|---|---|
+|position|$\text{usize}$|current index into the token vector.|
+|tokens|$\text{Vec}\langle\text{ExpressionTokens}\rangle$|the list of tokens to parse.|
+
+### Type: usize
+
+The `position` field uses the type $\text{usize}$, which is a primitive pointer-sized unsigned integer. Its maximum value is $2^{64} - 1$ on 64-bit targets, and its minimum is zero.
+
+Most Rust integer types use consistent memory regardless of the system. For example, $\text{u32}$ always uses 32 bits (4 bytes) of memory, and so on for types like $\text{u8}$, $\text{i64}$, etc.
+
+In contrast, $\text{usize}$ and $\text{isize}$ are architecture-dependent types whose size adapts to the underlying system. These types are more like aliases/nicknames than integer types per se.
+
+|Type|Description|Equivalent|Use Case|
+|---|---|---|---|
+|$\text{usize}$|unsigned, pointer-sized|$\text{u32}$ on 32-bit, $\text{u64}$ on 64-bit|array indices, collection lengths, memory sizes.|
+|$\text{isize}$|signed, pointer-sized|$\text{i32}$ on 32-bit, $\text{i64}$ on 64-bit|signed integers matching platform word size.|
+
+See: https://towardsdev.com/understanding-rusts-dynamic-integer-types-usize-and-isize-60b44dd581b6
+
+### Signed vs Unsigned
+
+|Type|Values|Range|
+|---|---|---|
+|Signed ($\text{i8}$, $\text{i32}$, $\text{isize}$, etc.)|negative, zero, or positive|$-2^{n-1}$ to $2^{n-1} - 1$|
+|Unsigned ($\text{u8}$, $\text{u32}$, $\text{usize}$, etc.)|zero or positive only|$0$ to $2^n - 1$|
+
+### Type: Vec
+
+The `tokens` field uses $\text{Vec}\langle\text{ExpressionTokens}\rangle$, which is a contiguous, growable array type.
+
+"Contiguous" means elements are stored one after another in memory, like a chain where each piece touches the next.
+
+See: https://doc.rust-lang.org/std/vec/struct.Vec.html
+
+### Summary
+
+The parser must know its current position and have access to the tokens at that position. As parsing proceeds, the position advances through the token vector.
+
+### Implementation
+
+```rust
+pub struct Parser {
+    position: usize,
+    tokens: Vec<ExpressionTokens>,
+}
+```
+
+---
+
+## 16. Parser Implementation
+
+File: src/parser.rs
+
+This is the implementation of the `Parser` struct.
+
+The main objective of the implementation is to create nodes of the type `ASTNode` which will be used to evaluate any given expressions.
+
+### Method Overview
+
+|Method|Signature|Description|
+|---|---|---|
+|`new`|`(Vec<ExpressionTokens>) -> Self`|creates a parser instance starting at position 0.|
+|`peek`|`(&self) -> Option<&ExpressionTokens>`|returns a reference to the current token without advancing.|
+|`advance`|`(&mut self)`|moves position forward by one.|
+|`parse_expression`|`(&mut self, i32) -> Option<ASTNode>`|the core Pratt parsing algorithm.|
+|`parse`|`(&mut self) -> Option<ASTNode>`|convenience method that calls `parse_expression(0)`.|
+
+### Method: `new`
+
+Creates a new parser with the given tokens, starting at position 0.
+
+```rust
+pub fn new(tokens: Vec<ExpressionTokens>) -> Self {
+    Parser {
+        position: 0,
+        tokens,
+    }
+}
+```
+
+### Method: `peek`
+
+Returns a reference to the current token without advancing the position. Returns `None` if at end of input.
+
+The method uses `self.tokens.get(self.position)`, which safely returns `Option<&T>` instead of panicking on out-of-bounds access.
+
+```rust
+fn peek(&self) -> Option<&ExpressionTokens> {
+    self.tokens.get(self.position)
+}
+```
+
+### Method: `advance`
+
+Moves the position forward by one. Simple increment.
+
+```rust
+fn advance(&mut self) {
+    self.position += 1;
+}
+```
+
+### Method: `parse`
+
+Convenience entry point that calls `parse_expression` with minimum binding power of 0, meaning any operator can be accepted.
+
+```rust
+pub fn parse(&mut self) -> Option<ASTNode> {
+    self.parse_expression(0)
+}
+```
+
+---
+
+## 17. The Pratt Parsing Algorithm
+
+File: src/parser.rs
+
+The `parse_expression` method is the heart of the parser. It implements the Pratt parsing algorithm.
+
+### Signature
+
+```rust
+fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode>
+```
+
+|Parameter|Type|Description|
+|---|---|---|
+|`min_bp`|$\text{i32}$|minimum binding power required for an operator to "claim" the current expression.|
+
+### Algorithm Overview
+
+The algorithm has two phases:
+
+**Phase 1: Parse the left-hand side (prefix position)**
+
+Match on the current token and handle:
+
+|Token|Action|Result|
+|---|---|---|
+|`Number(n)`|advance, return number node.|`ASTNode::Number(n)`|
+|`Variable(name)`|advance, check for function call.|`ASTNode::Variable` or `ASTNode::Function`|
+|`LeftParenthesis`|advance, parse inner expression, expect `)`.|inner `ASTNode`|
+|anything else|return `None` (parse error).|`None`|
+
+**Phase 2: Parse operators (infix position)**
+
+Loop until no more operators or operator is too weak:
+
+$1$ $\rightarrow$ Peek at the next token.
+
+$2$ $\rightarrow$ If it's an operator, get its binding power.
+
+$3$ $\rightarrow$ If $\text{LBP} \leq \text{min\_bp}$, the operator is too weak; break.
+
+$4$ $\rightarrow$ Otherwise, consume the operator and recursively parse the right-hand side with $\text{RBP}$ as the new minimum.
+
+$5$ $\rightarrow$ Build an `Operator` node with the left and right children.
+
+$6$ $\rightarrow$ The new node becomes the new "left" for the next iteration.
+
+$7$ $\rightarrow$ Repeat.
+
+### Why It Works
+
+The key insight is the recursive call with `rbp`:
+
+```rust
+let right = self.parse_expression(rbp)?;
+```
+
+By passing `rbp` as the minimum binding power, we ensure that any operator on the right must have $\text{LBP} > \text{RBP}$ to steal the operand. This naturally handles precedence.
+
+### Example Trace: $3 + 5 \times 2$
+
+$1$ $\rightarrow$ `parse_expression(0)`:
+- Parse left: `Number(3)`.
+- See `+` with $(\text{LBP}=10, \text{RBP}=9)$. Since $10 > 0$, consume it.
+- Recurse: `parse_expression(9)`.
+
+$2$ $\rightarrow$ `parse_expression(9)`:
+- Parse left: `Number(5)`.
+- See `*` with $(\text{LBP}=20, \text{RBP}=19)$. Since $20 > 9$, consume it.
+- Recurse: `parse_expression(19)`.
+
+$3$ $\rightarrow$ `parse_expression(19)`:
+- Parse left: `Number(2)`.
+- No more tokens. Return `Number(2)`.
+
+$4$ $\rightarrow$ Back in `parse_expression(9)`:
+- Build `Operator(*, Number(5), Number(2))`.
+- No more tokens (or next operator too weak). Return.
+
+$5$ $\rightarrow$ Back in `parse_expression(0)`:
+- Build `Operator(+, Number(3), Operator(*, Number(5), Number(2)))`.
+- Return.
+
+Result:
+
+```
+        (+)
+       /   \
+     (3)   (*)
+           /   \
+         (5)   (2)
+```
+
+### Handling Functions
+
+When we see a `Variable` followed by `LeftParenthesis`, it's a function call, not a variable:
+
+$1$ $\rightarrow$ See `Variable("sqrt")`, advance.
+
+$2$ $\rightarrow$ Peek and see `LeftParenthesis`, advance.
+
+$3$ $\rightarrow$ Recursively parse the argument with `parse_expression(0)`.
+
+$4$ $\rightarrow$ Expect and consume `RightParenthesis`.
+
+$5$ $\rightarrow$ Return `ASTNode::Function { name, argument }`.
+
+### Handling Parentheses
+
+Parentheses reset the binding power:
+
+$1$ $\rightarrow$ See `LeftParenthesis`, advance.
+
+$2$ $\rightarrow$ Call `parse_expression(0)` -- the 0 allows any operator inside.
+
+$3$ $\rightarrow$ Expect and consume `RightParenthesis`.
+
+$4$ $\rightarrow$ Return the inner expression.
+
+This is why $(3 + 5) \times 2$ evaluates correctly: the inner $+$ is parsed completely before $\times$ sees it.
+
+### The `.cloned()` Pattern
+
+The code uses `self.peek().cloned()` to avoid borrow conflicts:
+
+```rust
+let mut left = match self.peek().cloned() {
+    // ...
+}
+```
+
+- `peek()` returns `Option<&ExpressionTokens>` (a reference).
+- While that reference exists, we cannot call `self.advance()` (which mutates `self`).
+- `.cloned()` converts `Option<&T>` to `Option<T>`, copying the token.
+- Now the borrow ends, and we can safely call `self.advance()`.
+
+This requires `ExpressionTokens` to derive `Clone`.
+
+### Implementation
+
+```rust
+fn parse_expression(&mut self, min_bp: i32) -> Option<ASTNode> {
+    let mut left = match self.peek().cloned() {
+        Some(ExpressionTokens::Number(token)) => {
+            self.advance();
+            ASTNode::Number(token)
+        }
+        Some(ExpressionTokens::Variable(name)) => {
+            self.advance();
+            if let Some(ExpressionTokens::LeftParenthesis) = self.peek().cloned() {
+                self.advance();
+                let argument = self.parse_expression(0)?;
+                match self.peek().cloned() {
+                    Some(ExpressionTokens::RightParenthesis) => self.advance(),
+                    _ => return None,
+                }
+                ASTNode::Function {
+                    name,
+                    argument: Box::new(argument),
+                }
+            } else {
+                ASTNode::Variable(name)
+            }
+        }
+        Some(ExpressionTokens::LeftParenthesis) => {
+            self.advance();
+            let inner = self.parse_expression(0)?;
+            match self.peek().cloned() {
+                Some(ExpressionTokens::RightParenthesis) => self.advance(),
+                _ => return None,
+            }
+            inner
+        }
+        _ => return None,
+    };
+
+    loop {
+        let token = self.peek().cloned();
+        match token {
+            Some(ExpressionTokens::Operator(token)) => {
+                let (lbp, rbp) = match BindPower::get_bind_power(token) {
+                    Some(bp) => bp,
+                    None => break,
+                };
+                if lbp <= min_bp {
+                    break;
+                }
+
+                let op = token;
+                self.advance();
+
+                let right = self.parse_expression(rbp)?;
+
+                left = ASTNode::Operator {
+                    operator: op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+            }
+            _ => break,
+        }
+    }
+    Some(left)
+}
+```
+
+---
+
+## 18. Parser Summary
+
+File: src/parser.rs
+
+### What the Parser Does
+
+|Input|Output|
+|---|---|
+|`Vec<ExpressionTokens>`|`Option<ASTNode>`|
+
+### Supported Constructs
+
+|Construct|Example|Resulting Node|
+|---|---|---|
+|Numbers|`3.14`|`ASTNode::Number(3.14)`|
+|Variables|`x`|`ASTNode::Variable("x")`|
+|Binary Operators|`3 + 5`|`ASTNode::Operator { +, 3, 5 }`|
+|Parentheses|`(3 + 5)`|inner node returned directly|
+|Function Calls|`sqrt(16)`|`ASTNode::Function { "sqrt", 16 }`|
+
+### Not Yet Supported
+
+|Construct|Example|Reason|
+|---|---|---|
+|Unary Operators|`-5`|would require prefix handling in Phase 1.|
+|Multiple Arguments|`max(3, 5)`|would require comma parsing.|
+|Implicit Multiplication|`2x`|would require lookahead.|
+
+### Error Handling
+
+The parser returns `Option<ASTNode>`:
+
+- `Some(ast)` $\rightarrow$ parsing succeeded.
+- `None` $\rightarrow$ parsing failed (unexpected token, missing parenthesis, etc.).
+
+For more detailed error messages, the parser could be extended to return `Result<ASTNode, ParseError>` with specific error variants.
