@@ -1372,3 +1372,302 @@ The parser returns `Option<ASTNode>`:
 - `None` $\rightarrow$ parsing failed (unexpected token, missing parenthesis, etc.).
 
 For more detailed error messages, the parser could be extended to return `Result<ASTNode, ParseError>` with specific error variants.
+
+## 19. The Main Module
+
+File: src/main.rs
+
+The main module is the entry point of the application. It ties together the three-stage pipeline: Lexer, Parser, and Evaluator.
+
+### Module Declarations
+
+The file begins with module declarations:
+
+```rust
+mod evaluator;
+mod lexer;
+mod parser;
+```
+
+These tell Rust to include the code from `evaluator.rs`, `lexer.rs`, and `parser.rs` as submodules of the main crate.
+
+### Imports
+
+```rust
+use evaluator::{EvaluationContext, evaluate};
+use lexer::Lexer;
+use parser::Parser;
+use std::collections::HashMap;
+```
+
+|Import|Source|Purpose|
+|---|---|---|
+|`EvaluationContext`|evaluator.rs|holds variables and functions for evaluation.|
+|`evaluate`|evaluator.rs|the function that walks the AST and computes the result.|
+|`Lexer`|lexer.rs|tokenizes the input string.|
+|`Parser`|parser.rs|builds the AST from tokens.|
+|`HashMap`|std::collections|used to create empty maps for context initialization.|
+
+---
+
+## 20. The Main Function
+
+File: src/main.rs
+
+The `main` function orchestrates the entire evaluation pipeline.
+
+### Step-by-Step Breakdown
+
+**Step 1: Define the Expression**
+
+```rust
+let expression: String = "(3 + (5 - (3 * sqrt(16)))) * 2".to_string();
+```
+
+The expression is a `String` containing the mathematical expression to evaluate. The `.to_string()` method converts a string literal (`&str`) into an owned `String`.
+
+**Step 2: Tokenize (Lexer)**
+
+```rust
+let mut lexer = Lexer::new(expression);
+let tokens = lexer.tokenize();
+```
+
+$1$ $\rightarrow$ Create a new `Lexer` instance with the expression.
+
+$2$ $\rightarrow$ Call `tokenize()` to produce a `Vec<ExpressionTokens>`.
+
+For the expression `"(3 + (5 - (3 * sqrt(16)))) * 2"`, the tokens would be:
+
+$$[\text{LeftParen}, \text{Number}(3), \text{Operator}('+'), \text{LeftParen}, \ldots]$$
+
+**Step 3: Parse (Parser)**
+
+```rust
+let mut parser = Parser::new(tokens);
+let ast = parser.parse();
+```
+
+$1$ $\rightarrow$ Create a new `Parser` instance with the token vector.
+
+$2$ $\rightarrow$ Call `parse()` to produce an `Option<ASTNode>`.
+
+The parser returns `Some(ast)` if parsing succeeds, or `None` if there's a syntax error.
+
+**Step 4: Handle Parse Result**
+
+```rust
+match ast {
+    Some(ast) => {
+        // evaluation code
+    }
+    None => {
+        println!("Parse error")
+    }
+}
+```
+
+We use `match` to handle both cases:
+
+- `Some(ast)` $\rightarrow$ parsing succeeded; proceed to evaluation.
+- `None` $\rightarrow$ parsing failed; print an error message.
+
+**Step 5: Create Context**
+
+```rust
+let mut context = EvaluationContext::new(HashMap::new(), HashMap::new());
+```
+
+Create an empty `EvaluationContext` with:
+
+- No predefined variables.
+- No predefined functions.
+
+The context must be `mut` because we will add functions to it.
+
+**Step 6: Register Functions**
+
+```rust
+context.set_function("sqrt".to_string(), |args| args[0].sqrt());
+```
+
+Register the `sqrt` function in the context:
+
+- Name: `"sqrt"`
+- Implementation: a closure that takes `args: Vec<f64>` and returns `args[0].sqrt()`.
+
+The closure `|args| args[0].sqrt()` is shorthand for:
+
+```rust
+fn sqrt_fn(args: Vec<f64>) -> f64 {
+    args[0].sqrt()
+}
+```
+
+> Note: In some Rust versions, closures may not coerce to function pointers. If compilation fails, define a named function instead.
+
+**Step 7: Evaluate**
+
+```rust
+let result = evaluate(&ast, &context);
+```
+
+Call the `evaluate` function with:
+
+- `&ast` $\rightarrow$ a reference to the AST.
+- `&context` $\rightarrow$ a reference to the evaluation context.
+
+The function returns a `DetailedEvaluationResult` containing:
+
+- `value: Result<f64, EvaluationError>` $\rightarrow$ the computed value or an error.
+- `steps: Vec<String>` $\rightarrow$ a trace of evaluation steps.
+
+**Step 8: Print Results**
+
+```rust
+println!("Steps: {:?}", result.steps);
+println!("Result: {:?}", result.value);
+```
+
+Print the evaluation steps and the final result using debug formatting (`{:?}`).
+
+---
+
+## 21. Example Execution
+
+File: src/main.rs
+
+### Input Expression
+
+$$(3 + (5 - (3 \times \sqrt{16}))) \times 2$$
+
+### Evaluation Trace
+
+$1$ $\rightarrow$ Evaluate $\sqrt{16} = 4$.
+
+$2$ $\rightarrow$ Evaluate $3 \times 4 = 12$.
+
+$3$ $\rightarrow$ Evaluate $5 - 12 = -7$.
+
+$4$ $\rightarrow$ Evaluate $3 + (-7) = -4$.
+
+$5$ $\rightarrow$ Evaluate $(-4) \times 2 = -8$.
+
+### Output
+
+```
+Steps: ["sqrt(16) = 4", "3 * 4 = 12", "5 - 12 = -7", "3 + -7 = -4", "-4 * 2 = -8"]
+Result: Ok(-8.0)
+```
+
+### Verification
+
+$$\begin{aligned}
+&(3 + (5 - (3 \times \sqrt{16}))) \times 2 \\
+&= (3 + (5 - (3 \times 4))) \times 2 \\
+&= (3 + (5 - 12)) \times 2 \\
+&= (3 + (-7)) \times 2 \\
+&= (-4) \times 2 \\
+&= -8
+\end{aligned}$$
+
+---
+
+## 22. Full Implementation
+
+File: src/main.rs
+
+```rust
+mod evaluator;
+mod lexer;
+mod parser;
+
+use evaluator::{EvaluationContext, evaluate};
+use lexer::Lexer;
+use parser::Parser;
+use std::collections::HashMap;
+
+fn main() {
+    let expression: String = "(3 + (5 - (3 * sqrt(16)))) * 2".to_string();
+    let mut lexer = Lexer::new(expression);
+    let tokens = lexer.tokenize();
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    match ast {
+        Some(ast) => {
+            let mut context = EvaluationContext::new(HashMap::new(), HashMap::new());
+            context.set_function("sqrt".to_string(), |args| args[0].sqrt());
+            let result = evaluate(&ast, &context);
+            println!("Steps: {:?}", result.steps);
+            println!("Result: {:?}", result.value);
+        }
+        None => {
+            println!("Parse error")
+        }
+    }
+}
+```
+
+---
+
+## 23. Extending the Main Module
+
+File: src/main.rs
+
+### Adding More Functions
+
+```rust
+context.set_function("sin".to_string(), |args| args[0].sin());
+context.set_function("cos".to_string(), |args| args[0].cos());
+context.set_function("abs".to_string(), |args| args[0].abs());
+context.set_function("ln".to_string(), |args| args[0].ln());
+```
+
+### Adding Variables
+
+```rust
+context.set_variable("pi".to_string(), std::f64::consts::PI);
+context.set_variable("e".to_string(), std::f64::consts::E);
+context.set_variable("x".to_string(), 10.0);
+```
+
+### Reading Expression from User Input
+
+```rust
+use std::io::{self, Write};
+
+fn main() {
+    print!("Enter expression: ");
+    io::stdout().flush().unwrap();
+    
+    let mut expression = String::new();
+    io::stdin().read_line(&mut expression).unwrap();
+    let expression = expression.trim().to_string();
+    
+    // ... rest of the pipeline
+}
+```
+
+### Error Handling Improvements
+
+Instead of just printing "Parse error", provide more context:
+
+```rust
+match ast {
+    Some(ast) => {
+        let result = evaluate(&ast, &context);
+        match result.value {
+            Ok(value) => {
+                println!("Steps: {:?}", result.steps);
+                println!("Result: {}", value);
+            }
+            Err(e) => {
+                println!("Evaluation error: {:?}", e);
+            }
+        }
+    }
+    None => {
+        println!("Parse error: failed to parse expression");
+    }
+}
+```
