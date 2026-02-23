@@ -1,5 +1,6 @@
 mod evaluator;
 mod lexer;
+mod operations;
 mod parser;
 
 use evaluator::{EvaluationContext, evaluate};
