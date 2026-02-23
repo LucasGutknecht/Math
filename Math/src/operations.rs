@@ -8,28 +8,22 @@ impl Sum {
         Self { nums, carry }
     }
 
-    fn reverse_string(input: &str) -> String {
-        input.chars().rev().collect()
-    }
+    fn summation(nums: Vec<u32>) -> u32 {
+        let sum = Sum::new(nums, 0);
+        let result_xor = sum.nums.iter().copied().reduce(|a, b| a ^ b);
+        let result_and = sum
+            .nums
+            .iter()
+            .copied()
+            .reduce(|a, b| a & b)
+            .unwrap_or_default();
 
-    fn get_binary(&mut self) -> Vec<String> {
-        let mut binary_nums = Vec::new();
-        let mut binary_num = String::new();
-        let mut dividend: u32;
-        for num in self.nums.iter().copied() {
-            dividend = num;
-            while dividend != 0 {
-                if !dividend.is_multiple_of(2) {
-                    binary_num.push_str(&1.to_string());
-                } else {
-                    binary_num.push_str(&0.to_string());
-                }
-                dividend /= 2;
-            }
+        let carry: u32 = result_and << 1;
 
-            binary_nums.push(Sum::reverse_string(&binary_num));
-            binary_num.clear();
+        if carry == 0 {
+            result_xor.unwrap_or_default()
+        } else {
+            Sum::summation(vec![result_xor.unwrap_or_default(), carry])
         }
-        binary_nums
     }
 }
